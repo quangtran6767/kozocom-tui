@@ -8,13 +8,22 @@ import (
 	"github.com/quangtran6767/kozocom-tui/ui"
 )
 
+type PanelID int
+
+const (
+	PanelSidebar PanelID = iota
+	PanelContent
+	PanelFooter
+)
+
 type appModel struct {
-	sidebar sidebar.Model
-	content content.Model
-	footer  footer.Model
-	width   int
-	height  int
-	ready   bool
+	activePanel PanelID
+	sidebar     sidebar.Model
+	content     content.Model
+	footer      footer.Model
+	width       int
+	height      int
+	ready       bool
 }
 
 func newAppModel() appModel {
@@ -37,6 +46,12 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "1":
+			m.switchPanel(PanelSidebar)
+		case "2":
+			m.switchPanel(PanelContent)
+		case "3":
+			m.switchPanel(PanelFooter)
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -72,24 +87,27 @@ func (m appModel) View() tea.View {
 	dims := ui.CalculateLayout(m.width, m.height)
 
 	sidebarPanel := ui.RenderPanel(
-		"Sidebar",
+		"[1] Sidebar",
 		m.sidebar.View(),
 		dims.SidebarWidth,
 		dims.SidebarHeight,
+		m.activePanel == PanelSidebar,
 	)
 
 	contentPanel := ui.RenderPanel(
-		"Content",
+		"[2] Content",
 		m.content.View(),
 		dims.ContentWidth,
 		dims.TopHeight,
+		m.activePanel == PanelContent,
 	)
 
 	footerPanel := ui.RenderPanel(
-		"Footer",
+		"[3] Footer",
 		m.footer.View(),
 		dims.ContentWidth,
 		dims.BottomHeight,
+		m.activePanel == PanelFooter,
 	)
 
 	layout := ui.RenderLayout(sidebarPanel, contentPanel, footerPanel)
@@ -98,4 +116,21 @@ func (m appModel) View() tea.View {
 	v.AltScreen = true
 
 	return v
+}
+
+func (m *appModel) switchPanel(p PanelID) {
+	m.sidebar.Blur()
+	m.content.Blur()
+	m.footer.Blur()
+
+	m.activePanel = p
+
+	switch p {
+	case PanelSidebar:
+		m.sidebar.Focus()
+	case PanelContent:
+		m.content.Focus()
+	case PanelFooter:
+		m.footer.Focus()
+	}
 }

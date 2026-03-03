@@ -2,7 +2,7 @@ package ui
 
 import "charm.land/lipgloss/v2"
 
-func RenderPanel(title, content string, width, height int) string {
+func RenderPanel(title, content string, width, height int, focused bool) string {
 	innerWidth := width - 2
 	innerHeight := height - 2
 
@@ -13,10 +13,16 @@ func RenderPanel(title, content string, width, height int) string {
 		innerHeight = 0
 	}
 
+	// Decide border color based on which panel being focused on
+	borderColor := BorderColor
+	if focused {
+		borderColor = ActiveBorderColor
+	}
+
 	// Create border box
 	boxStyle := lipgloss.NewStyle().
 		Border(PanelBorder).
-		BorderForeground(BorderColor).
+		BorderForeground(borderColor).
 		Width(width).
 		Height(innerHeight)
 

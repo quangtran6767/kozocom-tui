@@ -1,7 +1,7 @@
 package messages
 
 type AuthCheckSuccessMsg struct {
-	UserID int
+	UserID string
 }
 
 type AuthCheckFailMsg struct{}
@@ -10,7 +10,7 @@ type NoTokenMsg struct{}
 
 type LoginSuccessMsg struct {
 	Token  string
-	UserID int
+	UserID string
 }
 
 type LoginFailMsg struct {

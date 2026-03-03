@@ -9,7 +9,7 @@ import (
 const (
 	appDirName = "kozocom-tui"
 	tokenFile  = "token"
-	BaseURL    = "http://localhost:8000"
+	BaseURL    = "http://localhost:8000/api/v1"
 )
 
 // Build tokenpath, os independent

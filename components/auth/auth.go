@@ -36,7 +36,7 @@ type Model struct {
 	focusIndex int
 	errMsg     string
 	token      string
-	userID     int
+	userID     string
 	width      int
 	height     int
 }
@@ -83,7 +83,7 @@ func (m Model) Token() string {
 	return m.token
 }
 
-func (m Model) UserID() int {
+func (m Model) UserID() string {
 	return m.userID
 }
 
@@ -92,7 +92,9 @@ func (m Model) UserID() int {
 func (m Model) Init() tea.Cmd {
 	token, err := config.LoadToken()
 	if err != nil || token == "" {
-		return func() tea.Msg { return messages.NoTokenMsg{} }
+		return func() tea.Msg {
+			return messages.AuthCheckFailMsg{}
+		}
 	}
 
 	return tea.Batch(
@@ -115,11 +117,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) updateCheckingAuth(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case messages.NoTokenMsg:
-		m.phase = PhaseLoginForm
-		return m, m.emailInput.Focus()
 	case messages.AuthCheckSuccessMsg:
-		m.userID = msg.UserID
+		authMsg := msg
+		m.userID = authMsg.UserID
 		m.phase = PhaseDone
 		return m, nil
 	case messages.AuthCheckFailMsg:

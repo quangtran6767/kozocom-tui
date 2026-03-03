@@ -20,43 +20,36 @@ var httpClient = &http.Client{
 // return tea.Cmd - run async in bubble tea runtime
 func CheckAuth(token string) tea.Cmd {
 	return func() tea.Msg {
-		config.DebugLog.Println("CheckAuth: sending GET /me...")
-		req, err := http.NewRequest("GET", config.BaseURL+"/me", nil)
+		req, err := http.NewRequest("GET", config.BaseURL+"/user/infomation", nil)
 		if err != nil {
-			config.DebugLog.Printf("CheckAuth: failed to build request: %v", err)
+			config.DebugLog.Println("CheckAuth: failed to create request", err)
 			return messages.AuthCheckFailMsg{}
 		}
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
-			config.DebugLog.Printf("CheckAuth: HTTP error: %v", err)
+			config.DebugLog.Println("CheckAuth: failed to send request", err)
 			return messages.AuthCheckFailMsg{}
 		}
 		defer resp.Body.Close()
-
-		config.DebugLog.Printf("CheckAuth: response status = %d", resp.StatusCode)
 
 		if resp.StatusCode != http.StatusOK {
 			return messages.AuthCheckFailMsg{}
 		}
 
 		var result struct {
-			Success bool `json:"success"`
-			User    int  `json:"user"`
+			Data struct {
+				ID    string `json:"id"`
+				Email string `json:"email"`
+			} `json:"data"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-			config.DebugLog.Printf("CheckAuth: decode error: %v", err)
+			config.DebugLog.Println("CheckAuth: failed to decode response", err)
 			return messages.AuthCheckFailMsg{}
 		}
 
-		config.DebugLog.Printf("CheckAuth: success=%v, user=%d", result.Success, result.User)
-
-		if !result.Success {
-			return messages.AuthCheckFailMsg{}
-		}
-
-		return messages.AuthCheckSuccessMsg{UserID: result.User}
+		return messages.AuthCheckSuccessMsg{UserID: result.Data.ID}
 	}
 }
 
@@ -70,7 +63,7 @@ func Login(email, password string) tea.Cmd {
 		})
 
 		resp, err := httpClient.Post(
-			config.BaseURL+"/login",
+			config.BaseURL+"/user/login",
 			"application/json",
 			bytes.NewBuffer(body),
 		)
@@ -80,27 +73,27 @@ func Login(email, password string) tea.Cmd {
 		}
 		defer resp.Body.Close()
 
-		var result struct {
-			Success bool   `json:"success"`
-			Token   string `json:"token"`
-			User    int    `json:"user"`
-			Message string `json:"message"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-			return messages.LoginFailMsg{Error: "Can not decode response"}
+		if resp.StatusCode != http.StatusOK {
+			return messages.LoginFailMsg{Error: fmt.Sprintf("Login failed with status code: %d", resp.StatusCode)}
 		}
 
-		if !result.Success || resp.StatusCode != http.StatusOK {
-			errMsg := result.Message
-			if errMsg == "" {
-				errMsg = fmt.Sprintf("Login failed with status code: %d", resp.StatusCode)
-			}
-			return messages.LoginFailMsg{Error: errMsg}
+		var result struct {
+			Data struct {
+				Token struct {
+					AccessToken string `json:"access_token"`
+				} `json:"token"`
+				UserInfo struct {
+					ID int `json:"id"`
+				} `json:"user_info"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			return messages.LoginFailMsg{Error: "Cannot decode response"}
 		}
 
 		return messages.LoginSuccessMsg{
-			Token:  result.Token,
-			UserID: result.User,
+			Token:  result.Data.Token.AccessToken,
+			UserID: fmt.Sprintf("%d", result.Data.UserInfo.ID),
 		}
 	}
 }

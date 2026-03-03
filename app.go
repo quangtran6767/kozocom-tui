@@ -49,7 +49,7 @@ func newAppModel() appModel {
 func (m appModel) Init() tea.Cmd {
 	return tea.Batch(
 		m.auth.Init(),
-		func() tea.Msg { return tea.RequestWindowSize() },
+		tea.RequestWindowSize,
 	)
 }
 

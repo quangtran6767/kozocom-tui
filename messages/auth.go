@@ -1,6 +1,7 @@
 package messages
 
 type AuthCheckSuccessMsg struct {
+	Token  string
 	UserID string
 	Email  string
 }

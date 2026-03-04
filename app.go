@@ -40,7 +40,6 @@ type appModel struct {
 	content     content.Model
 	footer      footer.Model
 	help        help.Model
-	token       string
 	width       int
 	height      int
 	ready       bool
@@ -189,9 +188,8 @@ func (m appModel) updateAuth(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.auth.IsDone() {
 		m.state = StateMain
-		m.token = m.auth.Token()
 		m.userinfo.SetUserInfo(m.auth.Email(), m.auth.UserID())
-		return m, services.CheckinTodayStatus(m.token)
+		return m, services.CheckinTodayStatus(m.auth.Token())
 	}
 	return m, cmd
 }
@@ -213,27 +211,21 @@ func (m appModel) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.userinfo.SetCheckinLoading(true)
 				return m, tea.Batch(
 					m.userinfo.Init(), // start spinner
-					services.Checkin(m.token),
+					services.Checkin(m.auth.Token()),
 				)
 			}
 		}
-
 	case messages.CheckinStatusMsg:
 		m.userinfo.SetCheckinStatus(msg.IsCheckedIn)
 		return m, nil
-
 	case messages.CheckinStatusFailMsg:
-		// Silently ignore — user info will show "Not checked in"
 		return m, nil
-
 	case messages.CheckinSuccessMsg:
 		m.userinfo.SetCheckinLoading(false)
 		m.userinfo.SetCheckinStatus(true)
 		return m, nil
-
 	case messages.CheckinFailMsg:
 		m.userinfo.SetCheckinLoading(false)
-		// TODO: show toast notification with msg.Error
 		return m, nil
 	}
 

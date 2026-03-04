@@ -49,7 +49,7 @@ func CheckAuth(token string) tea.Cmd {
 			return messages.AuthCheckFailMsg{}
 		}
 
-		return messages.AuthCheckSuccessMsg{UserID: result.Data.ID, Email: result.Data.Email}
+		return messages.AuthCheckSuccessMsg{Token: token, UserID: result.Data.ID, Email: result.Data.Email}
 	}
 }
 

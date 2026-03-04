@@ -124,6 +124,7 @@ func (m Model) updateCheckingAuth(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case messages.AuthCheckSuccessMsg:
 		authMsg := msg
+		m.token = authMsg.Token
 		m.userID = authMsg.UserID
 		m.email = authMsg.Email
 		m.phase = PhaseDone

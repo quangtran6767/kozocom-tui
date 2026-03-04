@@ -5,21 +5,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/quangtran6767/kozocom-tui/testutil"
 )
-
-func redirectConfigDir(t *testing.T) {
-	t.Helper()
-	tmpDir := t.TempDir()
-
-	switch runtime.GOOS {
-	case "windows":
-		t.Setenv("AppData", tmpDir)
-	case "darwin":
-		t.Setenv("HOME", tmpDir)
-	default:
-		t.Setenv("XDG_CONFIG_HOME", tmpDir)
-	}
-}
 
 // tokenFilePath returns the actual token file path after redirect.
 // Must be called AFTER redirectConfigDir.
@@ -46,7 +34,7 @@ func writeTokenFile(t *testing.T, content string) {
 
 // -- Tests ---
 func TestLoadToken_FileNotExist(t *testing.T) {
-	redirectConfigDir(t)
+	testutil.RedirectConfigDir(t)
 
 	token, err := LoadToken()
 
@@ -60,7 +48,7 @@ func TestLoadToken_FileNotExist(t *testing.T) {
 }
 
 func TestLoadToken_ReturnsToken(t *testing.T) {
-	redirectConfigDir(t)
+	testutil.RedirectConfigDir(t)
 	writeTokenFile(t, "my-secrect-token")
 
 	token, err := LoadToken()
@@ -75,7 +63,7 @@ func TestLoadToken_ReturnsToken(t *testing.T) {
 }
 
 func TestSaveToken_CreatesDirectoryIfNotExist(t *testing.T) {
-	redirectConfigDir(t)
+	testutil.RedirectConfigDir(t)
 	err := SaveToken("new-token")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -87,7 +75,7 @@ func TestSaveToken_CreatesDirectoryIfNotExist(t *testing.T) {
 }
 
 func TestSaveToken_WritesCorrectContent(t *testing.T) {
-	redirectConfigDir(t)
+	testutil.RedirectConfigDir(t)
 	err := SaveToken("super-secret")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
@@ -105,7 +93,7 @@ func TestSaveToken_FilePermission(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("file permission check not applicable on Windows")
 	}
-	redirectConfigDir(t)
+	testutil.RedirectConfigDir(t)
 	_ = SaveToken("some-token")
 	info, err := os.Stat(tokenFilePath(t))
 	if err != nil {
@@ -117,7 +105,7 @@ func TestSaveToken_FilePermission(t *testing.T) {
 }
 
 func TestSaveAndLoadToken(t *testing.T) {
-	redirectConfigDir(t)
+	testutil.RedirectConfigDir(t)
 	want := "round-trip-token"
 	if err := SaveToken(want); err != nil {
 		t.Fatalf("SaveToken failed: %v", err)

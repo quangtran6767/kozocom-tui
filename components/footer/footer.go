@@ -1,6 +1,9 @@
 package footer
 
-import tea "charm.land/bubbletea/v2"
+import (
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+)
 
 type Model struct {
 	width   int
@@ -27,6 +30,10 @@ func (m *Model) Blur() {
 
 func (m Model) IsFocused() bool {
 	return m.focused
+}
+
+func (m Model) PanelBindings() []key.Binding {
+	return []key.Binding{}
 }
 
 func (m Model) Init() tea.Cmd {

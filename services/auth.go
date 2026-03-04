@@ -84,7 +84,7 @@ func Login(email, password string) tea.Cmd {
 				} `json:"token"`
 				UserInfo struct {
 					ID    int    `json:"id"`
-					Email string `json:"id"`
+					Email string `json:"email"`
 				} `json:"user_info"`
 			} `json:"data"`
 		}

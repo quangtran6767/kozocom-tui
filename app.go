@@ -1,11 +1,18 @@
 package main
 
 import (
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/quangtran6767/kozocom-tui/components/auth"
 	"github.com/quangtran6767/kozocom-tui/components/content"
 	"github.com/quangtran6767/kozocom-tui/components/footer"
 	"github.com/quangtran6767/kozocom-tui/components/sidebar"
+	"github.com/quangtran6767/kozocom-tui/components/userinfo"
+	"github.com/quangtran6767/kozocom-tui/keybindings"
+	"github.com/quangtran6767/kozocom-tui/messages"
+	"github.com/quangtran6767/kozocom-tui/services"
 	"github.com/quangtran6767/kozocom-tui/ui"
 )
 
@@ -28,9 +35,12 @@ type appModel struct {
 	state       AppState
 	auth        auth.Model
 	activePanel PanelID
+	userinfo    userinfo.Model
 	sidebar     sidebar.Model
 	content     content.Model
 	footer      footer.Model
+	help        help.Model
+	token       string
 	width       int
 	height      int
 	ready       bool
@@ -38,11 +48,13 @@ type appModel struct {
 
 func newAppModel() appModel {
 	return appModel{
-		state:   StateAuth,
-		auth:    auth.New(),
-		sidebar: sidebar.New(),
-		content: content.New(),
-		footer:  footer.New(),
+		state:    StateAuth,
+		auth:     auth.New(),
+		userinfo: userinfo.New(),
+		sidebar:  sidebar.New(),
+		content:  content.New(),
+		footer:   footer.New(),
+		help:     help.New(),
 	}
 }
 
@@ -62,8 +74,8 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.auth.SetSize(msg.Width, msg.Height)
 
 		dims := ui.CalculateLayout(m.width, m.height)
+		m.userinfo.SetSize(dims.SidebarWidth, dims.SidebarUserInfoHeight)
 		m.sidebar.SetSize(dims.SidebarWidth, dims.SidebarHeight)
-		m.sidebar.SetMenuSize(dims.SidebarWidth, dims.SidebarUserInfoHeight)
 		m.content.SetSize(dims.ContentWidth, dims.TopHeight)
 		m.footer.SetSize(dims.ContentWidth, dims.BottomHeight)
 	}
@@ -91,20 +103,20 @@ func (m appModel) View() tea.View {
 	case StateMain:
 		dims := ui.CalculateLayout(m.width, m.height)
 
+		userInfoPanel := ui.RenderPanel(
+			"User Info",
+			m.userinfo.View(),
+			dims.SidebarWidth,
+			dims.SidebarUserInfoHeight,
+			false, // User info panel doesn't need focus
+		)
+
 		sidebarPanel := ui.RenderPanel(
 			"[1] Sidebar",
 			m.sidebar.View(),
 			dims.SidebarWidth,
 			dims.SidebarHeight,
 			m.activePanel == PanelSidebar,
-		)
-
-		sidebarUserInfoPanel := ui.RenderPanel(
-			"User Info",
-			m.sidebar.ViewUserInfo(),
-			dims.SidebarWidth,
-			dims.SidebarUserInfoHeight,
-			false, // User info panel don't need focus
 		)
 
 		contentPanel := ui.RenderPanel(
@@ -123,11 +135,25 @@ func (m appModel) View() tea.View {
 			m.activePanel == PanelFooter,
 		)
 
-		layout := ui.RenderLayout(sidebarPanel, sidebarUserInfoPanel, contentPanel, footerPanel)
+		layout := ui.RenderLayout(sidebarPanel, userInfoPanel, contentPanel, footerPanel)
 
-		v := tea.NewView(layout)
+		var panelBindings []key.Binding
+		switch m.activePanel {
+		case PanelSidebar:
+			panelBindings = m.sidebar.PanelBindings()
+		case PanelContent:
+			panelBindings = m.content.PanelBindings()
+		case PanelFooter:
+			panelBindings = m.footer.PanelBindings()
+		}
+
+		km := keybindings.NewDynamicKeyMap(panelBindings)
+		helpBar := m.help.View(km)
+
+		final := lipgloss.JoinVertical(lipgloss.Left, layout, helpBar)
+
+		v := tea.NewView(final)
 		v.AltScreen = true
-
 		return v
 	}
 
@@ -163,7 +189,9 @@ func (m appModel) updateAuth(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.auth.IsDone() {
 		m.state = StateMain
-		m.sidebar.SetUserInfo(m.auth.Email(), m.auth.UserID())
+		m.token = m.auth.Token()
+		m.userinfo.SetUserInfo(m.auth.Email(), m.auth.UserID())
+		return m, services.CheckinTodayStatus(m.token)
 	}
 	return m, cmd
 }
@@ -180,13 +208,42 @@ func (m appModel) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.switchPanel(PanelContent)
 		case "3":
 			m.switchPanel(PanelFooter)
+		case "C":
+			if !m.userinfo.IsCheckedIn() && !m.userinfo.IsLoading() {
+				m.userinfo.SetCheckinLoading(true)
+				return m, tea.Batch(
+					m.userinfo.Init(), // start spinner
+					services.Checkin(m.token),
+				)
+			}
 		}
+
+	case messages.CheckinStatusMsg:
+		m.userinfo.SetCheckinStatus(msg.IsCheckedIn)
+		return m, nil
+
+	case messages.CheckinStatusFailMsg:
+		// Silently ignore — user info will show "Not checked in"
+		return m, nil
+
+	case messages.CheckinSuccessMsg:
+		m.userinfo.SetCheckinLoading(false)
+		m.userinfo.SetCheckinStatus(true)
+		return m, nil
+
+	case messages.CheckinFailMsg:
+		m.userinfo.SetCheckinLoading(false)
+		// TODO: show toast notification with msg.Error
+		return m, nil
 	}
 
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
 	)
+
+	m.userinfo, cmd = m.userinfo.Update(msg)
+	cmds = append(cmds, cmd)
 
 	m.sidebar, cmd = m.sidebar.Update(msg)
 	cmds = append(cmds, cmd)

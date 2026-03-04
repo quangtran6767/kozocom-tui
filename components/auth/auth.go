@@ -92,8 +92,8 @@ func (m Model) Email() string {
 	return m.email
 }
 
-// Init intialize the auth flow.
-// Read token from file -> if has token call /me, if not display form
+// Init initializes the auth flow.
+// Read token from file -> if has token call /me, if not display form.
 func (m Model) Init() tea.Cmd {
 	token, err := config.LoadToken()
 	if err != nil || token == "" {

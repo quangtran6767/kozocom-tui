@@ -15,6 +15,9 @@ var (
 	// Label
 	LabelForeground = lipgloss.Color("#888888")
 
+	// Checkin status
+	CheckinSuccessColor = lipgloss.Color("#4ADE80")
+
 	// Error
 	ErrorForeground = lipgloss.Color("#FF4444")
 

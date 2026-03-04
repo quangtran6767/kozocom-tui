@@ -37,6 +37,7 @@ type Model struct {
 	errMsg     string
 	token      string
 	userID     string
+	email      string
 	width      int
 	height     int
 }
@@ -87,6 +88,10 @@ func (m Model) UserID() string {
 	return m.userID
 }
 
+func (m Model) Email() string {
+	return m.email
+}
+
 // Init intialize the auth flow.
 // Read token from file -> if has token call /me, if not display form
 func (m Model) Init() tea.Cmd {
@@ -120,6 +125,7 @@ func (m Model) updateCheckingAuth(msg tea.Msg) (Model, tea.Cmd) {
 	case messages.AuthCheckSuccessMsg:
 		authMsg := msg
 		m.userID = authMsg.UserID
+		m.email = authMsg.Email
 		m.phase = PhaseDone
 		return m, nil
 	case messages.AuthCheckFailMsg:
@@ -184,6 +190,7 @@ func (m Model) updateLoggingIn(msg tea.Msg) (Model, tea.Cmd) {
 	case messages.LoginSuccessMsg:
 		m.token = msg.Token
 		m.userID = msg.UserID
+		m.email = msg.Email
 		m.phase = PhaseDone
 		_ = config.SaveToken(msg.Token)
 		return m, nil

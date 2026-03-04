@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../WorkHub/kozocom/kz-portal-api"
+		},
+		{
+			"path": "../../WorkHub/workspace/entry-agents"
+		}
+	],
+	"settings": {}
+}

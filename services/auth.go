@@ -49,7 +49,7 @@ func CheckAuth(token string) tea.Cmd {
 			return messages.AuthCheckFailMsg{}
 		}
 
-		return messages.AuthCheckSuccessMsg{UserID: result.Data.ID}
+		return messages.AuthCheckSuccessMsg{UserID: result.Data.ID, Email: result.Data.Email}
 	}
 }
 
@@ -83,7 +83,8 @@ func Login(email, password string) tea.Cmd {
 					AccessToken string `json:"access_token"`
 				} `json:"token"`
 				UserInfo struct {
-					ID int `json:"id"`
+					ID    int    `json:"id"`
+					Email string `json:"id"`
 				} `json:"user_info"`
 			} `json:"data"`
 		}
@@ -94,6 +95,7 @@ func Login(email, password string) tea.Cmd {
 		return messages.LoginSuccessMsg{
 			Token:  result.Data.Token.AccessToken,
 			UserID: fmt.Sprintf("%d", result.Data.UserInfo.ID),
+			Email:  result.Data.UserInfo.Email,
 		}
 	}
 }

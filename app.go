@@ -63,6 +63,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		dims := ui.CalculateLayout(m.width, m.height)
 		m.sidebar.SetSize(dims.SidebarWidth, dims.SidebarHeight)
+		m.sidebar.SetMenuSize(dims.SidebarWidth, dims.SidebarUserInfoHeight)
 		m.content.SetSize(dims.ContentWidth, dims.TopHeight)
 		m.footer.SetSize(dims.ContentWidth, dims.BottomHeight)
 	}
@@ -98,6 +99,14 @@ func (m appModel) View() tea.View {
 			m.activePanel == PanelSidebar,
 		)
 
+		sidebarUserInfoPanel := ui.RenderPanel(
+			"User Info",
+			m.sidebar.ViewUserInfo(),
+			dims.SidebarWidth,
+			dims.SidebarUserInfoHeight,
+			false, // User info panel don't need focus
+		)
+
 		contentPanel := ui.RenderPanel(
 			"[2] Content",
 			m.content.View(),
@@ -114,7 +123,7 @@ func (m appModel) View() tea.View {
 			m.activePanel == PanelFooter,
 		)
 
-		layout := ui.RenderLayout(sidebarPanel, contentPanel, footerPanel)
+		layout := ui.RenderLayout(sidebarPanel, sidebarUserInfoPanel, contentPanel, footerPanel)
 
 		v := tea.NewView(layout)
 		v.AltScreen = true
@@ -154,6 +163,7 @@ func (m appModel) updateAuth(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.auth.IsDone() {
 		m.state = StateMain
+		m.sidebar.SetUserInfo(m.auth.Email(), m.auth.UserID())
 	}
 	return m, cmd
 }

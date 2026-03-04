@@ -9,6 +9,7 @@ import (
 )
 
 type Model struct {
+	logo    logoModel
 	spinner spinner.Model
 	width   int
 	height  int
@@ -21,6 +22,7 @@ type Model struct {
 
 func New() Model {
 	return Model{
+		logo: newLogo(),
 		spinner: spinner.New(
 			spinner.WithSpinner(spinner.Dot),
 			spinner.WithStyle(ui.SpinnerStyle),
@@ -59,16 +61,26 @@ func (m Model) PanelBindings() []key.Binding {
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return m.logo.Init()
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	var logoCmd tea.Cmd
+	m.logo, logoCmd = m.logo.Update(msg)
+	if logoCmd != nil {
+		cmds = append(cmds, logoCmd)
+	}
+
 	if m.checkinLoading {
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 	}
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
 func (m Model) View() string {
@@ -76,6 +88,7 @@ func (m Model) View() string {
 		return "Not logged in"
 	}
 
+	// Right side
 	emailStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(ui.LabelForeground)
@@ -85,7 +98,6 @@ func (m Model) View() string {
 
 	var statusText string
 	var statusStyle lipgloss.Style
-
 	if m.checkinLoading {
 		statusText = m.spinner.View() + " Checking in..."
 		statusStyle = lipgloss.NewStyle().Foreground(ui.LabelForeground)
@@ -97,9 +109,27 @@ func (m Model) View() string {
 		statusStyle = lipgloss.NewStyle().Foreground(ui.LabelForeground)
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left,
+	infoContent := lipgloss.JoinVertical(lipgloss.Left,
 		emailStyle.Render(m.userEmail),
 		idStyle.Render(m.userID),
 		statusStyle.Render(statusText),
 	)
+
+	// Left side
+	logoWidth := m.width * 2 / 5 // ~40% width for logo
+	infoWidth := m.width - logoWidth
+
+	if m.width < 30 {
+		return infoContent
+	}
+	logoCol := lipgloss.NewStyle().
+		Width(logoWidth).
+		Align(lipgloss.Center, lipgloss.Center).
+		Height(m.height - 2).
+		Render(m.logo.View())
+	infoCol := lipgloss.NewStyle().
+		Width(infoWidth).
+		Padding(1, 0, 0, 1).
+		Render(infoContent)
+	return lipgloss.JoinHorizontal(lipgloss.Center, logoCol, infoCol)
 }

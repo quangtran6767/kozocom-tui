@@ -189,7 +189,10 @@ func (m appModel) updateAuth(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.auth.IsDone() {
 		m.state = StateMain
 		m.userinfo.SetUserInfo(m.auth.Email(), m.auth.UserID())
-		return m, services.CheckinTodayStatus(m.auth.Token())
+		return m, tea.Batch(
+			m.userinfo.Init(),
+			services.CheckinTodayStatus(m.auth.Token()),
+		)
 	}
 	return m, cmd
 }

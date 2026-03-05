@@ -84,11 +84,7 @@ var (
 				Height(3)
 
 	CalendarStatsBoxStyle = lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("63")).
-				Padding(1, 2).
-				MarginTop(1).
-				Width(56)
+				Padding(1, 4)
 
 	// Sidebar styles
 	SidebarSelectedItemStyle = lipgloss.NewStyle().

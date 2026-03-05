@@ -125,9 +125,11 @@ func renderSummary(data *AttendanceData) string {
 	}
 
 	stats := fmt.Sprintf(
-		"📊 Summary\n"+
-			"Working Days:%8.1f     Paid Leave:%8.1f\n"+
-			"Unpaid Leave:%8.1f     OT Hours:  %8.1f",
+		"Summary\n\n"+
+			"Working Days: %.1f\n"+
+			"Paid Leave:   %.1f\n"+
+			"Unpaid Leave: %.1f\n"+
+			"OT Hours:     %.1f",
 		data.ActualWork,
 		data.DaysOffTaken,
 		data.UnpaidLeave,
@@ -144,12 +146,16 @@ func RenderCalendar(year int, month int, width int, height int, data *Attendance
 	summary := renderSummary(data)
 
 	// Combine components
-	cal := lipgloss.JoinVertical(lipgloss.Center,
+	calBlock := lipgloss.JoinVertical(lipgloss.Center,
 		header,
 		"",
 		daysHeader,
 		grid,
-		summary,
+	)
+
+	cal := lipgloss.JoinHorizontal(lipgloss.Top,
+		calBlock,
+		lipgloss.NewStyle().MarginTop(2).Render(summary),
 	)
 
 	// Center everything if width > our calendar width

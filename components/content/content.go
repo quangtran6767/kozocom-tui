@@ -65,20 +65,10 @@ func (m Model) IsFocused() bool {
 }
 
 func (m Model) PanelBindings() []key.Binding {
-	return []key.Binding{
-		key.NewBinding(
-			key.WithKeys("up", "k"),
-			key.WithHelp("↑/k", "scroll up"),
-		),
-		key.NewBinding(
-			key.WithKeys("down", "j"),
-			key.WithHelp("↓/j", "scroll down"),
-		),
-		key.NewBinding(
-			key.WithKeys("r"),
-			key.WithHelp("r", "refresh"),
-		),
+	if m.activeView == ViewCalendar && m.calendarInitialized {
+		return m.calendar.PanelBindings()
 	}
+	return []key.Binding{}
 }
 
 func (m Model) Init() tea.Cmd {

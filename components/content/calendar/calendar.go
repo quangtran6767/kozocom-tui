@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"github.com/quangtran6767/kozocom-tui/config"
@@ -100,4 +101,21 @@ func (m Model) View(width, height int) string {
 
 func (m Model) fetchDataCmd() tea.Cmd {
 	return services.FetchAttendanceLogs(m.Token, m.Year, int(m.Month))
+}
+
+func (m Model) PanelBindings() []key.Binding {
+	return []key.Binding{
+		key.NewBinding(
+			key.WithKeys("left", "h"),
+			key.WithHelp("←/h", "prev month"),
+		),
+		key.NewBinding(
+			key.WithKeys("right", "l"),
+			key.WithHelp("→/l", "next month"),
+		),
+		key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "refresh"),
+		),
+	}
 }

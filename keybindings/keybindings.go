@@ -52,8 +52,8 @@ func NewDynamicKeyMap(panel []key.Binding) *DynamicKeyMap {
 // ShortHelp render 1 line at the help bar
 func (k DynamicKeyMap) ShortHelp() []key.Binding {
 	all := make([]key.Binding, 0, len(k.panel)+len(k.global))
-	all = append(all, k.panel...)
 	all = append(all, k.global...)
+	all = append(all, k.panel...)
 	return all
 }
 

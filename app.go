@@ -194,6 +194,9 @@ func (m appModel) updateAuth(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.userinfo.Init(),
 			m.content.SetToken(m.auth.Token()),
 			services.CheckinTodayStatus(m.auth.Token()),
+			func() tea.Msg {
+				return messages.SidebarItemSelectedMsg{Item: messages.MenuAttendanceLog}
+			},
 		)
 	}
 	return m, cmd
@@ -232,6 +235,13 @@ func (m appModel) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.CheckinFailMsg:
 		m.userinfo.SetCheckinLoading(false)
 		return m, nil
+	case messages.SidebarItemSelectedMsg:
+		var cmd tea.Cmd
+		switch msg.Item {
+		case messages.MenuAttendanceLog:
+			cmd = m.content.ActivateView(content.ViewCalendar)
+		}
+		return m, cmd
 	}
 
 	var (

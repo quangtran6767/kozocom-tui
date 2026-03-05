@@ -99,6 +99,5 @@ func (m Model) View(width, height int) string {
 }
 
 func (m Model) fetchDataCmd() tea.Cmd {
-	m.Loading = true
 	return services.FetchAttendanceLogs(m.Token, m.Year, int(m.Month))
 }

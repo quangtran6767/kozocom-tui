@@ -3,25 +3,48 @@ package content
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/quangtran6767/kozocom-tui/components/content/calendar"
+)
+
+type ContentView int
+
+const (
+	ViewNone ContentView = iota
+	ViewCalendar
 )
 
 type Model struct {
 	width               int
 	height              int
 	focused             bool
+	activeView          ContentView
 	calendar            calendar.Model
 	calendarInitialized bool
+	token               string
 }
 
 func New() Model {
-	return Model{}
+	return Model{
+		activeView: ViewNone,
+	}
 }
 
 func (m *Model) SetToken(token string) tea.Cmd {
-	m.calendar = calendar.New(token)
-	m.calendarInitialized = true
-	return m.calendar.Init()
+	m.token = token
+	return nil
+}
+
+func (m *Model) ActivateView(view ContentView) tea.Cmd {
+	m.activeView = view
+
+	if view == ViewCalendar && !m.calendarInitialized && m.token != "" {
+		m.calendar = calendar.New(m.token)
+		m.calendarInitialized = true
+		return m.calendar.Init()
+	}
+
+	return nil
 }
 
 func (m *Model) SetSize(w, h int) {
@@ -63,28 +86,36 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	if !m.calendarInitialized {
+	if m.activeView == ViewNone {
 		return m, nil
 	}
 
 	var cmd tea.Cmd
-	// Only pass key messages if content is focused
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if m.focused {
+
+	switch m.activeView {
+	case ViewCalendar:
+		if m.calendarInitialized {
+			if _, isKeyMsg := msg.(tea.KeyMsg); isKeyMsg && !m.focused {
+				return m, nil
+			}
 			m.calendar, cmd = m.calendar.Update(msg)
 		}
-	default:
-		// Always pass other messages (like API responses)
-		m.calendar, cmd = m.calendar.Update(msg)
 	}
 
 	return m, cmd
 }
 
 func (m Model) View() string {
-	if !m.calendarInitialized {
-		return "Initializing content..."
+	if m.activeView == ViewNone {
+		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, "Welcome to Kozocom TUI\n\nPlease select an item from the sidebar.")
 	}
-	return m.calendar.View(m.width, m.height)
+
+	if m.activeView == ViewCalendar {
+		if !m.calendarInitialized {
+			return "Initializing calendar..."
+		}
+		return m.calendar.View(m.width, m.height)
+	}
+
+	return ""
 }

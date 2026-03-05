@@ -1,52 +1,55 @@
 package sidebar
 
 import (
+	"strings"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/quangtran6767/kozocom-tui/messages"
+	"github.com/quangtran6767/kozocom-tui/ui"
 )
 
-// Model manages the sidebar menu navigation.
-// User info and checkin status are handled by the userinfo component.
+type MenuItem struct {
+	ID    messages.MenuItemID
+	Label string
+	Icon  string
+}
+
 type Model struct {
 	width   int
 	height  int
 	focused bool
+	items   []MenuItem
+	cursor  int
 }
 
-// New creates a new sidebar model.
 func New() Model {
-	return Model{}
+	return Model{
+		items: []MenuItem{
+			{ID: messages.MenuAttendanceLog, Label: "Attendance Log", Icon: "📅"},
+		},
+		cursor:  0,
+		focused: false,
+	}
 }
 
-// SetSize sets the width and height of the sidebar panel.
-//
-// @param w int - width
-// @param h int - height
 func (m *Model) SetSize(w, h int) {
 	m.width = w
 	m.height = h
 }
 
-// Focus activates the sidebar panel.
 func (m *Model) Focus() {
 	m.focused = true
 }
 
-// Blur deactivates the sidebar panel.
 func (m *Model) Blur() {
 	m.focused = false
 }
 
-// IsFocused returns whether the sidebar is currently focused.
-//
-// @return bool - true if focused
 func (m Model) IsFocused() bool {
 	return m.focused
 }
 
-// PanelBindings returns sidebar-specific keybindings for the help bar.
-//
-// @return []key.Binding - list of keybindings
 func (m Model) PanelBindings() []key.Binding {
 	return []key.Binding{
 		key.NewBinding(
@@ -60,23 +63,68 @@ func (m Model) PanelBindings() []key.Binding {
 	}
 }
 
-// Init returns nil — no initialization commands needed.
 func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-// Update handles messages for the sidebar.
-//
-// @param msg tea.Msg - incoming message
-// @return Model - updated model
-// @return tea.Cmd - command to execute
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	if !m.focused {
+		return m, nil
+	}
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
+			}
+		case "down", "j":
+			if m.cursor < len(m.items)-1 {
+				m.cursor++
+			}
+		case "enter":
+			if len(m.items) > 0 {
+				selected := m.items[m.cursor].ID
+				return m, func() tea.Msg {
+					return messages.SidebarItemSelectedMsg{Item: selected}
+				}
+			}
+		}
+	}
 	return m, nil
 }
 
-// View renders the sidebar menu content.
-//
-// @return string - rendered output
 func (m Model) View() string {
-	return "Menu items here"
+	var sb strings.Builder
+
+	for i, item := range m.items {
+		isSelected := m.cursor == i
+
+		var text string
+		if isSelected {
+			text = "> " + item.Icon + " " + item.Label
+		} else {
+			text = "  " + item.Icon + " " + item.Label
+		}
+
+		var rendered string
+		if isSelected {
+			style := ui.SidebarSelectedItemStyle
+			if !m.focused {
+				style = style.Faint(true)
+			}
+			rendered = style.Render(text)
+		} else {
+			if m.focused {
+				rendered = ui.SidebarItemStyle.Render(text)
+			} else {
+				rendered = text
+			}
+		}
+
+		sb.WriteString(rendered + "\n")
+	}
+
+	return sb.String()
 }

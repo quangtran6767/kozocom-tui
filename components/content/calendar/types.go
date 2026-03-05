@@ -38,7 +38,7 @@ type DayLog struct {
 }
 
 type AttendanceData struct {
-	ID             int               `json:"id"`
+	ID             string            `json:"id"`
 	EmployeeID     string            `json:"employee_id"`
 	FirstName      string            `json:"first_name"`
 	LastName       string            `json:"last_name"`

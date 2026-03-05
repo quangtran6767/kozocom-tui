@@ -77,6 +77,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.sidebar.SetSize(dims.SidebarWidth, dims.SidebarHeight)
 		m.content.SetSize(dims.ContentWidth, dims.TopHeight)
 		m.footer.SetSize(dims.ContentWidth, dims.BottomHeight)
+
 	}
 
 	switch m.state {

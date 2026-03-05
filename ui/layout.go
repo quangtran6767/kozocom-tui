@@ -6,6 +6,7 @@ const (
 	SidebarRatio         = 0.25
 	SidebarUserInfoRatio = 0.20
 	TopContentRatio      = 0.65
+	HelpBarHeight        = 1
 )
 
 type LayoutDimemsions struct {
@@ -28,11 +29,13 @@ func CalculateLayout(totalWidth, totalHeight int) LayoutDimemsions {
 	sidebarW := int(float64(totalWidth) * SidebarRatio)
 	contentW := totalWidth - sidebarW
 
-	topH := int(float64(totalHeight) * TopContentRatio)
-	bottomH := totalHeight - topH
+	usableHeight := totalHeight - HelpBarHeight
 
-	sidebarUserInforH := int(float64(totalHeight) * SidebarUserInfoRatio)
-	sidebarMenuH := totalHeight - sidebarUserInforH
+	topH := int(float64(usableHeight) * TopContentRatio)
+	bottomH := usableHeight - topH
+
+	sidebarUserInforH := int(float64(usableHeight) * SidebarUserInfoRatio)
+	sidebarMenuH := usableHeight - sidebarUserInforH
 
 	return LayoutDimemsions{
 		SidebarWidth:          sidebarW,

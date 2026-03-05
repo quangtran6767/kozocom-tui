@@ -85,4 +85,11 @@ var (
 				Padding(1, 2).
 				MarginTop(1).
 				Width(56)
+
+	// Sidebar styles
+	SidebarSelectedItemStyle = lipgloss.NewStyle().
+					Foreground(lipgloss.Color("205")). // Pinkish
+					Bold(true)
+	SidebarItemStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("240")) // Gray
 )

@@ -15,11 +15,11 @@ func TestCalculateLayout(t *testing.T) {
 			totalHeight: 50,
 			want: LayoutDimemsions{
 				SidebarWidth:          25, // 100 * 0.25
-				SidebarHeight:         40, // 50 - 10
-				SidebarUserInfoHeight: 10, // 50 * 0.20
+				SidebarHeight:         40, // usable(49) - 9
+				SidebarUserInfoHeight: 9,  // int(49 * 0.20) = int(9.8) = 9
 				ContentWidth:          75, // 100 - 25
-				TopHeight:             32, // 50 * 0.65 = 32.5 → int = 32
-				BottomHeight:          18, // 50 - 32
+				TopHeight:             31, // int(49 * 0.65) = int(31.85) = 31
+				BottomHeight:          18, // 49 - 31
 			},
 		},
 		{
@@ -28,11 +28,11 @@ func TestCalculateLayout(t *testing.T) {
 			totalHeight: 0,
 			want: LayoutDimemsions{
 				SidebarWidth:          0,
-				SidebarHeight:         0,
-				SidebarUserInfoHeight: 0,
+				SidebarHeight:         -1, // usable(-1) - 0
+				SidebarUserInfoHeight: 0,  // int(-1 * 0.20) = 0
 				ContentWidth:          0,
-				TopHeight:             0,
-				BottomHeight:          0,
+				TopHeight:             0,  // int(-1 * 0.65) = 0
+				BottomHeight:          -1, // -1 - 0
 			},
 		},
 		{
@@ -41,11 +41,11 @@ func TestCalculateLayout(t *testing.T) {
 			totalHeight: 40,
 			want: LayoutDimemsions{
 				SidebarWidth:          50,  // 200 * 0.25
-				SidebarHeight:         32,  // 40 - 8
-				SidebarUserInfoHeight: 8,   // 40 * 0.20
+				SidebarHeight:         32,  // usable(39) - 7
+				SidebarUserInfoHeight: 7,   // int(39 * 0.20) = int(7.8) = 7
 				ContentWidth:          150, // 200 - 50
-				TopHeight:             26,  // 40 * 0.65
-				BottomHeight:          14,  // 40 - 26
+				TopHeight:             25,  // int(39 * 0.65) = int(25.35) = 25
+				BottomHeight:          14,  // 39 - 25
 			},
 		},
 		{
@@ -54,11 +54,11 @@ func TestCalculateLayout(t *testing.T) {
 			totalHeight: 33,
 			want: LayoutDimemsions{
 				SidebarWidth:          19, // int(79 * 0.25) = int(19.75) = 19
-				SidebarHeight:         27, // 33 - 6
-				SidebarUserInfoHeight: 6,  // int(33 * 0.20) = int(6.6) = 6
+				SidebarHeight:         26, // usable(32) - 6
+				SidebarUserInfoHeight: 6,  // int(32 * 0.20) = int(6.4) = 6
 				ContentWidth:          60, // 79 - 19
-				TopHeight:             21, // int(33 * 0.65) = int(21.45) = 21
-				BottomHeight:          12, // 33 - 21
+				TopHeight:             20, // int(32 * 0.65) = int(20.8) = 20
+				BottomHeight:          12, // 32 - 20
 			},
 		},
 		{
@@ -67,11 +67,11 @@ func TestCalculateLayout(t *testing.T) {
 			totalHeight: 3,
 			want: LayoutDimemsions{
 				SidebarWidth:          1, // int(4 * 0.25) = 1
-				SidebarHeight:         3, // 3 - 0
-				SidebarUserInfoHeight: 0, // int(3 * 0.20) = int(0.6) = 0
+				SidebarHeight:         2, // usable(2) - 0
+				SidebarUserInfoHeight: 0, // int(2 * 0.20) = int(0.4) = 0
 				ContentWidth:          3, // 4 - 1
-				TopHeight:             1, // int(3 * 0.65) = int(1.95) = 1
-				BottomHeight:          2, // 3 - 1
+				TopHeight:             1, // int(2 * 0.65) = int(1.3) = 1
+				BottomHeight:          1, // 2 - 1
 			},
 		},
 	}
@@ -101,6 +101,7 @@ func TestCalculateLayout_Invariants(t *testing.T) {
 	for _, s := range sizes {
 		t.Run("invariants", func(t *testing.T) {
 			dims := CalculateLayout(s.width, s.height)
+			usableHeight := s.height - HelpBarHeight
 
 			// Horizontal: sidebar + content must equal total width
 			if dims.SidebarWidth+dims.ContentWidth != s.width {
@@ -112,23 +113,23 @@ func TestCalculateLayout_Invariants(t *testing.T) {
 				)
 			}
 
-			// Vertical right: top + bottom must equal total height
-			if dims.TopHeight+dims.BottomHeight != s.height {
+			// Vertical right: top + bottom must equal usable height (total - help bar)
+			if dims.TopHeight+dims.BottomHeight != usableHeight {
 				t.Errorf(
-					"%dx%d: vertical mismatch: TopHeight(%d) + BottomHeight(%d) = %d, want %d",
+					"%dx%d: vertical mismatch: TopHeight(%d) + BottomHeight(%d) = %d, want %d (usable)",
 					s.width, s.height,
 					dims.TopHeight, dims.BottomHeight,
-					dims.TopHeight+dims.BottomHeight, s.height,
+					dims.TopHeight+dims.BottomHeight, usableHeight,
 				)
 			}
 
-			// Vertical left: sidebar menu + user info must equal total height
-			if dims.SidebarHeight+dims.SidebarUserInfoHeight != s.height {
+			// Vertical left: sidebar menu + user info must equal usable height
+			if dims.SidebarHeight+dims.SidebarUserInfoHeight != usableHeight {
 				t.Errorf(
-					"%dx%d: sidebar vertical mismatch: SidebarHeight(%d) + SidebarUserInfoHeight(%d) = %d, want %d",
+					"%dx%d: sidebar vertical mismatch: SidebarHeight(%d) + SidebarUserInfoHeight(%d) = %d, want %d (usable)",
 					s.width, s.height,
 					dims.SidebarHeight, dims.SidebarUserInfoHeight,
-					dims.SidebarHeight+dims.SidebarUserInfoHeight, s.height,
+					dims.SidebarHeight+dims.SidebarUserInfoHeight, usableHeight,
 				)
 			}
 		})

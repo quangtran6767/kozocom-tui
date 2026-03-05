@@ -48,6 +48,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "h", "left":
+			m.Data = nil
 			m.Month--
 			if m.Month < time.January {
 				m.Year--
@@ -56,11 +57,19 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.Loading = true
 			cmds = append(cmds, m.fetchDataCmd())
 		case "l", "right":
+			m.Data = nil
 			m.Month++
 			if m.Month > time.December {
 				m.Year++
 				m.Month = time.January
 			}
+			m.Loading = true
+			cmds = append(cmds, m.fetchDataCmd())
+		case "t":
+			now := time.Now()
+			m.Year = now.Year()
+			m.Month = now.Month()
+			m.Data = nil
 			m.Loading = true
 			cmds = append(cmds, m.fetchDataCmd())
 		case "r":
@@ -112,6 +121,10 @@ func (m Model) PanelBindings() []key.Binding {
 		key.NewBinding(
 			key.WithKeys("right", "l"),
 			key.WithHelp("→/l", "next month"),
+		),
+		key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "today"),
 		),
 		key.NewBinding(
 			key.WithKeys("r"),

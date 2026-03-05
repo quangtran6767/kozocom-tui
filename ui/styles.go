@@ -46,7 +46,11 @@ var (
 	// Calendar styles
 	CalendarHeaderStyle = lipgloss.NewStyle().
 				Bold(true).
-				Foreground(lipgloss.Color("#FAFAFA")).
+				Foreground(TitleForeground).
+				Align(lipgloss.Center)
+
+	CalendarDayHeaderStyle = lipgloss.NewStyle().
+				Width(6).
 				Align(lipgloss.Center)
 
 	CalendarDayStyle = lipgloss.NewStyle().

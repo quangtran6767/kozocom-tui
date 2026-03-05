@@ -11,7 +11,20 @@ import (
 
 func renderHeader(year, month int) string {
 	m := time.Month(month)
-	title := fmt.Sprintf("◀  %s %d  ▶", m.String(), year)
+	now := time.Now()
+	currentYear, currentMonth := now.Year(), now.Month()
+
+	var title string
+	if year == currentYear && m == currentMonth {
+		title = fmt.Sprintf("◀  %s %d  ●  ▶", m.String(), year)
+	} else {
+		monthsDiff := (year-currentYear)*12 + int(m) - int(currentMonth)
+		if monthsDiff > 0 {
+			title = fmt.Sprintf("◀  %s %d  (+%d)  ▶", m.String(), year, monthsDiff)
+		} else {
+			title = fmt.Sprintf("◀  %s %d  (%d)  ▶", m.String(), year, monthsDiff)
+		}
+	}
 	return ui.CalendarHeaderStyle.Width(56).Render(title)
 }
 
@@ -19,7 +32,7 @@ func renderDaysOfWeek() string {
 	days := []string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}
 	var renderedDays []string
 	for _, d := range days {
-		renderedDays = append(renderedDays, lipgloss.NewStyle().Width(6).Align(lipgloss.Center).Render(d))
+		renderedDays = append(renderedDays, ui.CalendarDayHeaderStyle.Render(d))
 	}
 	// Note: 6*7 = 42 width, plus borders = 56
 	return lipgloss.JoinHorizontal(lipgloss.Top, renderedDays...)
@@ -28,10 +41,12 @@ func renderDaysOfWeek() string {
 func renderGrid(year int, month int, data *AttendanceData) string {
 	firstOfMonth := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Local)
 	lastOfMonth := firstOfMonth.AddDate(0, 1, -1)
+	todayStr := time.Now().Format("2006-01-02")
+	firstWeekday := firstOfMonth.Weekday()
 
 	// Weekday starts with Sunday = 0
 	// We want Monday = 0
-	startOffset := int(firstOfMonth.Weekday()) - 1
+	startOffset := int(firstWeekday) - 1
 	if startOffset < 0 {
 		startOffset = 6
 	}
@@ -46,8 +61,8 @@ func renderGrid(year int, month int, data *AttendanceData) string {
 
 	for d := 1; d <= lastOfMonth.Day(); d++ {
 		dateStr := fmt.Sprintf("%04d-%02d-%02d", year, month, d)
-		isToday := dateStr == time.Now().Format("2006-01-02")
-		weekday := time.Date(year, time.Month(month), d, 0, 0, 0, 0, time.Local).Weekday()
+		isToday := dateStr == todayStr
+		weekday := time.Weekday((int(firstWeekday) + d - 1) % 7)
 		isWeekend := weekday == time.Sunday || weekday == time.Saturday
 
 		cellStyle := ui.CalendarDayStyle

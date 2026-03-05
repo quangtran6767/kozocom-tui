@@ -13,3 +13,11 @@ type CheckinSuccessMsg struct{}
 type CheckinFailMsg struct {
 	Error string
 }
+
+type AttendanceLogsMsg struct {
+	Data interface{}
+}
+
+type AttendanceLogsFailMsg struct {
+	Error string
+}

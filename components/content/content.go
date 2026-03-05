@@ -3,16 +3,25 @@ package content
 import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/quangtran6767/kozocom-tui/components/content/calendar"
 )
 
 type Model struct {
-	width   int
-	height  int
-	focused bool
+	width               int
+	height              int
+	focused             bool
+	calendar            calendar.Model
+	calendarInitialized bool
 }
 
 func New() Model {
 	return Model{}
+}
+
+func (m *Model) SetToken(token string) tea.Cmd {
+	m.calendar = calendar.New(token)
+	m.calendarInitialized = true
+	return m.calendar.Init()
 }
 
 func (m *Model) SetSize(w, h int) {
@@ -54,9 +63,28 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	return m, nil
+	if !m.calendarInitialized {
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	// Only pass key messages if content is focused
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if m.focused {
+			m.calendar, cmd = m.calendar.Update(msg)
+		}
+	default:
+		// Always pass other messages (like API responses)
+		m.calendar, cmd = m.calendar.Update(msg)
+	}
+
+	return m, cmd
 }
 
 func (m Model) View() string {
-	return "Main content here..."
+	if !m.calendarInitialized {
+		return "Initializing content..."
+	}
+	return m.calendar.View(m.width, m.height)
 }

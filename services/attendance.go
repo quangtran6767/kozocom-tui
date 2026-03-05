@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/quangtran6767/kozocom-tui/config"
@@ -90,5 +91,41 @@ func Checkin(token string) tea.Cmd {
 		}
 
 		return messages.CheckinSuccessMsg{}
+	}
+}
+
+// FetchAttendanceLogs calls GET /api/v1/user/attendance-logs to get all attendance logs for a specific year/month
+func FetchAttendanceLogs(token string, year int, month int) tea.Cmd {
+	return func() tea.Msg {
+		url := config.BaseURL + "/user/attendance-logs?year=" + strconv.Itoa(year) + "&month=" + strconv.Itoa(month)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			config.DebugLog.Println("FetchAttendanceLogs: failed to create request", err)
+			return messages.AttendanceLogsFailMsg{Error: "Failed to create request"}
+		}
+
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			config.DebugLog.Println("FetchAttendanceLogs: failed to connect", err)
+			return messages.AttendanceLogsFailMsg{Error: "Cannot connect to server"}
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return messages.AttendanceLogsFailMsg{Error: "Server returned error"}
+		}
+
+		var rawResponse struct {
+			Data json.RawMessage `json:"data"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&rawResponse); err != nil {
+			config.DebugLog.Println("FetchAttendanceLogs: failed to decode response", err)
+			return messages.AttendanceLogsFailMsg{Error: "Cannot decode response"}
+		}
+
+		return messages.AttendanceLogsMsg{Data: rawResponse.Data}
 	}
 }

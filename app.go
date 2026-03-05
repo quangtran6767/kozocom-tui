@@ -191,6 +191,7 @@ func (m appModel) updateAuth(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.userinfo.SetUserInfo(m.auth.Email(), m.auth.UserID())
 		return m, tea.Batch(
 			m.userinfo.Init(),
+			m.content.SetToken(m.auth.Token()),
 			services.CheckinTodayStatus(m.auth.Token()),
 		)
 	}

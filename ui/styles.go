@@ -42,4 +42,47 @@ var (
 	// Spinner style
 	SpinnerStyle = lipgloss.NewStyle().
 			Foreground(LegendFg)
+
+	// Calendar styles
+	CalendarHeaderStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("#FAFAFA")).
+				Align(lipgloss.Center)
+
+	CalendarDayStyle = lipgloss.NewStyle().
+				Width(6).
+				Height(3).
+				Align(lipgloss.Center, lipgloss.Center).
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("240"))
+
+	CalendarTodayStyle = CalendarDayStyle.
+				BorderForeground(lipgloss.Color("63")).
+				Bold(true)
+
+	CalendarPresentStyle = CalendarDayStyle.
+				Background(lipgloss.Color("22")). // Green tint
+				Foreground(lipgloss.Color("255"))
+
+	CalendarPaidLeaveStyle = CalendarDayStyle.
+				Background(lipgloss.Color("130")). // Yellow/Orange tint
+				Foreground(lipgloss.Color("255"))
+
+	CalendarUnpaidLeaveStyle = CalendarDayStyle.
+					Background(lipgloss.Color("88")). // Red tint
+					Foreground(lipgloss.Color("255"))
+
+	CalendarWeekendStyle = CalendarDayStyle.
+				Foreground(lipgloss.Color("240"))
+
+	CalendarEmptyDayStyle = lipgloss.NewStyle().
+				Width(6).
+				Height(3)
+
+	CalendarStatsBoxStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("63")).
+				Padding(1, 2).
+				MarginTop(1).
+				Width(56)
 )

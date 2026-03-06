@@ -45,9 +45,60 @@ func TestAppUpdateMain_SidebarItemSelected(t *testing.T) {
 	updatedModel, _ := m.Update(msg)
 	newM := updatedModel.(appModel)
 
-	// Since we selected the Attendance Log, active view in content should trigger initialization
-	// But mostly we just want to ensure the update propagates and doesn't panic
 	if newM.state != StateMain {
 		t.Errorf("Expected state to remain StateMain, changed to %v", newM.state)
+	}
+	if newM.activePanel != PanelContent {
+		t.Errorf("Expected sidebar selection to focus content panel")
+	}
+	if !newM.content.IsFocused() {
+		t.Errorf("Expected content panel to be focused after sidebar selection")
+	}
+}
+
+func TestAppUpdateMain_SidebarItemSelectedDayOff(t *testing.T) {
+	m := newAppModel()
+	m.enterMainState("user@example.com", "7", "test-token")
+
+	msg := messages.SidebarItemSelectedMsg{Item: messages.MenuDayOffRequest}
+	updatedModel, _ := m.Update(msg)
+	newM := updatedModel.(appModel)
+
+	if newM.activePanel != PanelContent {
+		t.Fatal("Expected day-off selection to focus content panel")
+	}
+	if !newM.content.IsFocused() {
+		t.Fatal("Expected content panel to stay focused for day-off view")
+	}
+	if len(newM.content.PanelBindings()) == 0 {
+		t.Fatal("Expected day-off panel bindings to be available after activation")
+	}
+}
+
+func TestEnterMainState_DefaultFocusAndContent(t *testing.T) {
+	m := newAppModel()
+
+	cmd := m.enterMainState("user@example.com", "7", "test-token")
+
+	if cmd == nil {
+		t.Fatal("Expected enterMainState to return initialization commands")
+	}
+	if m.state != StateMain {
+		t.Fatalf("Expected state to switch to main, got %v", m.state)
+	}
+	if m.token != "test-token" {
+		t.Fatalf("Expected app token to be stored, got %q", m.token)
+	}
+	if m.activePanel != PanelSidebar {
+		t.Fatalf("Expected sidebar to be active on startup, got %v", m.activePanel)
+	}
+	if !m.sidebar.IsFocused() {
+		t.Fatal("Expected sidebar to be focused on startup")
+	}
+	if m.content.IsFocused() {
+		t.Fatal("Expected content to remain unfocused on startup")
+	}
+	if len(m.content.PanelBindings()) == 0 {
+		t.Fatal("Expected default attendance log content to be activated on startup")
 	}
 }

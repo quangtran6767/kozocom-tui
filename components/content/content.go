@@ -5,6 +5,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/quangtran6767/kozocom-tui/components/content/calendar"
+	"github.com/quangtran6767/kozocom-tui/components/content/dayoff"
 )
 
 type ContentView int
@@ -12,6 +13,7 @@ type ContentView int
 const (
 	ViewNone ContentView = iota
 	ViewCalendar
+	ViewDayOff
 )
 
 type Model struct {
@@ -21,6 +23,8 @@ type Model struct {
 	activeView          ContentView
 	calendar            calendar.Model
 	calendarInitialized bool
+	dayoff              dayoff.Model
+	dayoffInitialized   bool
 	token               string
 }
 
@@ -42,6 +46,12 @@ func (m *Model) ActivateView(view ContentView) tea.Cmd {
 		m.calendar = calendar.New(m.token)
 		m.calendarInitialized = true
 		return m.calendar.Init()
+	}
+
+	if view == ViewDayOff && !m.dayoffInitialized && m.token != "" {
+		m.dayoff = dayoff.New(m.token)
+		m.dayoffInitialized = true
+		return m.dayoff.Init()
 	}
 
 	return nil
@@ -68,6 +78,9 @@ func (m Model) PanelBindings() []key.Binding {
 	if m.activeView == ViewCalendar && m.calendarInitialized {
 		return m.calendar.PanelBindings()
 	}
+	if m.activeView == ViewDayOff && m.dayoffInitialized {
+		return m.dayoff.PanelBindings()
+	}
 	return []key.Binding{}
 }
 
@@ -90,6 +103,18 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 			m.calendar, cmd = m.calendar.Update(msg)
 		}
+	case ViewDayOff:
+		if m.dayoffInitialized {
+			if _, isKeyMsg := msg.(tea.KeyMsg); isKeyMsg && !m.focused {
+				return m, nil
+			}
+			if m.focused {
+				m.dayoff.Focus()
+			} else {
+				m.dayoff.Blur()
+			}
+			m.dayoff, cmd = m.dayoff.Update(msg)
+		}
 	}
 
 	return m, cmd
@@ -105,6 +130,13 @@ func (m Model) View() string {
 			return "Initializing calendar..."
 		}
 		return m.calendar.View(m.width, m.height)
+	}
+
+	if m.activeView == ViewDayOff {
+		if !m.dayoffInitialized {
+			return "Initializing day-off requests..."
+		}
+		return m.dayoff.View(m.width, m.height)
 	}
 
 	return ""

@@ -34,6 +34,7 @@ const (
 type appModel struct {
 	state       AppState
 	auth        auth.Model
+	token       string
 	activePanel PanelID
 	userinfo    userinfo.Model
 	sidebar     sidebar.Model
@@ -177,6 +178,25 @@ func (m *appModel) switchPanel(p PanelID) {
 	}
 }
 
+func (m *appModel) enterMainState(email, userID, token string) tea.Cmd {
+	m.state = StateMain
+	m.token = token
+	m.userinfo.SetUserInfo(email, userID)
+	m.content.SetToken(token)
+	m.switchPanel(PanelSidebar)
+
+	return tea.Batch(
+		m.userinfo.Init(),
+		m.content.ActivateView(content.ViewCalendar),
+		services.CheckinTodayStatus(token),
+	)
+}
+
+func (m *appModel) activateContentView(view content.ContentView) tea.Cmd {
+	m.switchPanel(PanelContent)
+	return m.content.ActivateView(view)
+}
+
 func (m appModel) updateAuth(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		if keyMsg.String() == "ctrl+c" {
@@ -188,16 +208,7 @@ func (m appModel) updateAuth(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.auth, cmd = m.auth.Update(msg)
 
 	if m.auth.IsDone() {
-		m.state = StateMain
-		m.userinfo.SetUserInfo(m.auth.Email(), m.auth.UserID())
-		return m, tea.Batch(
-			m.userinfo.Init(),
-			m.content.SetToken(m.auth.Token()),
-			services.CheckinTodayStatus(m.auth.Token()),
-			func() tea.Msg {
-				return messages.SidebarItemSelectedMsg{Item: messages.MenuAttendanceLog}
-			},
-		)
+		return m, m.enterMainState(m.auth.Email(), m.auth.UserID(), m.auth.Token())
 	}
 	return m, cmd
 }
@@ -219,7 +230,7 @@ func (m appModel) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.userinfo.SetCheckinLoading(true)
 				return m, tea.Batch(
 					m.userinfo.Init(), // start spinner
-					services.Checkin(m.auth.Token()),
+					services.Checkin(m.token),
 				)
 			}
 		}
@@ -239,7 +250,9 @@ func (m appModel) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		switch msg.Item {
 		case messages.MenuAttendanceLog:
-			cmd = m.content.ActivateView(content.ViewCalendar)
+			cmd = m.activateContentView(content.ViewCalendar)
+		case messages.MenuDayOffRequest:
+			cmd = m.activateContentView(content.ViewDayOff)
 		}
 		return m, cmd
 	}

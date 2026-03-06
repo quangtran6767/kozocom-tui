@@ -92,4 +92,9 @@ var (
 					Bold(true)
 	SidebarItemStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("240")) // Gray
+
+	BoxStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("240")).
+			Padding(1, 2)
 )

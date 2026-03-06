@@ -12,7 +12,6 @@ import (
 type MenuItem struct {
 	ID    messages.MenuItemID
 	Label string
-	Icon  string
 }
 
 type Model struct {
@@ -26,7 +25,8 @@ type Model struct {
 func New() Model {
 	return Model{
 		items: []MenuItem{
-			{ID: messages.MenuAttendanceLog, Label: "Attendance Log", Icon: "📅"},
+			{ID: messages.MenuAttendanceLog, Label: "Attendance Log"},
+			{ID: messages.MenuDayOffRequest, Label: "Day-off Request"},
 		},
 		cursor:  0,
 		focused: false,
@@ -103,9 +103,9 @@ func (m Model) View() string {
 
 		var text string
 		if isSelected {
-			text = "> " + item.Icon + " " + item.Label
+			text = "> " + item.Label
 		} else {
-			text = "  " + item.Icon + " " + item.Label
+			text = "  " + item.Label
 		}
 
 		var rendered string

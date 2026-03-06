@@ -234,6 +234,10 @@ func (m Model) PanelBindings() []key.Binding {
 	return []key.Binding{}
 }
 
+func (m Model) ShouldBlockGlobalQuit() bool {
+	return m.focused && m.state == StateForm
+}
+
 func (m *Model) setPeriod(period time.Time) {
 	m.period = time.Date(period.Year(), period.Month(), 1, 0, 0, 0, 0, period.Location())
 	m.pager.Page = 0

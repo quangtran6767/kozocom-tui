@@ -4,8 +4,44 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/quangtran6767/kozocom-tui/components/content"
 	"github.com/quangtran6767/kozocom-tui/messages"
 )
+
+func TestQDoesNotQuitWhileDayOffFormIsOpen(t *testing.T) {
+	app := newAppModel()
+	app.state = StateMain
+	app.token = "token"
+	app.content.SetToken("token")
+	app.switchPanel(PanelContent)
+	app.content.ActivateView(content.ViewDayOff)
+
+	model, _ := app.updateMain(tea.KeyPressMsg{Code: 'n', Text: "n"})
+	updated, ok := model.(appModel)
+	if !ok {
+		t.Fatalf("expected app model after opening form, got %T", model)
+	}
+	if !updated.content.ShouldBlockGlobalQuit() {
+		t.Fatal("expected day-off form to block the global q shortcut")
+	}
+
+	model, cmd := updated.updateMain(tea.KeyPressMsg{Code: 'q', Text: "q"})
+	updated, ok = model.(appModel)
+	if !ok {
+		t.Fatalf("expected app model after pressing q, got %T", model)
+	}
+	if updated.state != StateMain {
+		t.Fatalf("expected q to keep the app running, got state %v", updated.state)
+	}
+
+	if cmd != nil {
+		if msg := cmd(); msg != nil {
+			if _, ok := msg.(tea.QuitMsg); ok {
+				t.Fatal("expected q inside the form to avoid quitting the app")
+			}
+		}
+	}
+}
 
 func TestAppUpdateMain_PanelSwitching(t *testing.T) {
 	m := newAppModel()

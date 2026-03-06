@@ -37,6 +37,13 @@ const (
 	pickerInvolvingPersons
 )
 
+type pickerFocus int
+
+const (
+	pickerFocusSearch pickerFocus = iota
+	pickerFocusList
+)
+
 type pickerOption struct {
 	id    int
 	label string
@@ -56,6 +63,7 @@ type formModel struct {
 	submitting             bool
 	picker                 pickerKind
 	pickerCursor           int
+	pickerFocus            pickerFocus
 	pickerSearch           textinput.Model
 	selectedLeaveBalanceID int
 	selectedApproverID     int
@@ -248,6 +256,22 @@ func (m *formModel) moveFocus(delta int) tea.Cmd {
 	return m.focusCurrent()
 }
 
+func (m *formModel) setPickerFocus(focus pickerFocus) tea.Cmd {
+	m.pickerFocus = focus
+	if focus == pickerFocusSearch {
+		return m.pickerSearch.Focus()
+	}
+	m.pickerSearch.Blur()
+	return nil
+}
+
+func (m *formModel) togglePickerFocus() tea.Cmd {
+	if m.pickerFocus == pickerFocusSearch {
+		return m.setPickerFocus(pickerFocusList)
+	}
+	return m.setPickerFocus(pickerFocusSearch)
+}
+
 func (m formModel) Init() tea.Cmd {
 	return nil
 }
@@ -390,6 +414,9 @@ func (m formModel) PanelBindings() []key.Binding {
 		}
 		if m.picker == pickerInvolvingPersons {
 			bindings = append(bindings, key.NewBinding(
+				key.WithKeys("tab"),
+				key.WithHelp("tab", "search/results"),
+			), key.NewBinding(
 				key.WithKeys("space"),
 				key.WithHelp("space", "toggle"),
 			))
@@ -421,6 +448,12 @@ func (m formModel) updatePicker(msg tea.Msg) (formModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		options := m.filteredPickerOptions()
+		if m.picker == pickerInvolvingPersons {
+			switch msg.String() {
+			case "tab", "shift+tab":
+				return m, m.togglePickerFocus()
+			}
+		}
 		switch msg.String() {
 		case "esc":
 			return m, m.closePicker()
@@ -443,10 +476,14 @@ func (m formModel) updatePicker(msg tea.Msg) (formModel, tea.Cmd) {
 			}
 			m.applyPickerSelection(options[m.pickerCursor])
 			return m, m.closePicker()
-		case " ":
-			if m.picker == pickerInvolvingPersons && len(options) > 0 {
+		}
+		if m.picker == pickerInvolvingPersons && m.pickerFocus == pickerFocusList && key.Matches(msg, key.NewBinding(key.WithKeys("space"))) {
+			if len(options) > 0 {
 				m.applyPickerSelection(options[m.pickerCursor])
 			}
+			return m, nil
+		}
+		if m.picker == pickerInvolvingPersons && m.pickerFocus == pickerFocusList {
 			return m, nil
 		}
 	}
@@ -468,12 +505,13 @@ func (m *formModel) openPicker(kind pickerKind) tea.Cmd {
 	m.errMsg = ""
 	m.pickerSearch.SetValue("")
 	m.pickerSearch.CursorEnd()
-	return m.pickerSearch.Focus()
+	return m.setPickerFocus(pickerFocusSearch)
 }
 
 func (m *formModel) closePicker() tea.Cmd {
 	m.picker = pickerNone
 	m.pickerCursor = 0
+	m.pickerFocus = pickerFocusSearch
 	m.pickerSearch.SetValue("")
 	m.pickerSearch.Blur()
 	return m.focusCurrent()
@@ -642,7 +680,7 @@ func (m formModel) pickerTitle() string {
 
 func (m formModel) helpText() string {
 	if m.picker == pickerInvolvingPersons {
-		return "Type to filter | Space: toggle | Enter: done | Esc: cancel"
+		return "Type to filter | Tab: search/results | Space: toggle | Enter: done | Esc: cancel"
 	}
 	if m.picker != pickerNone {
 		return "Type to filter | Enter: choose | Esc: close"

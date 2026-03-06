@@ -217,8 +217,12 @@ func (m appModel) updateMain(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "ctrl+c":
 			return m, tea.Quit
+		case "q":
+			if !m.content.ShouldBlockGlobalQuit() {
+				return m, tea.Quit
+			}
 		case "1":
 			m.switchPanel(PanelSidebar)
 		case "2":

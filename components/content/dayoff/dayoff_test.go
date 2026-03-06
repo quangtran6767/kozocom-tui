@@ -201,6 +201,34 @@ func TestEnterClosesInvolvingPickerWithoutTogglingSelection(t *testing.T) {
 	}
 }
 
+func TestInvolvingPickerUsesSpaceForSearchThenSelection(t *testing.T) {
+	form := newFormModel()
+	form.SetAllEmployees([]messages.EmployeeItem{
+		{AccountID: 2001, FullName: "Bob Ray"},
+	})
+	form.openPicker(pickerInvolvingPersons)
+
+	updated, _ := form.Update(tea.KeyPressMsg{Code: 'b', Text: "b"})
+	updated, _ = updated.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+
+	if got := updated.pickerSearch.Value(); got != "b " {
+		t.Fatalf("expected space to stay in search while search is focused, got %q", got)
+	}
+	if len(updated.selectedInvolvingIDs) != 0 {
+		t.Fatalf("expected search focus space to avoid toggling selection, got %#v", updated.selectedInvolvingIDs)
+	}
+
+	updated, _ = updated.Update(tea.KeyPressMsg{Code: tea.KeyTab})
+	if updated.pickerFocus != pickerFocusList {
+		t.Fatalf("expected tab to move picker focus to the results list, got %v", updated.pickerFocus)
+	}
+
+	updated, _ = updated.Update(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+	if _, ok := updated.selectedInvolvingIDs[2001]; !ok {
+		t.Fatalf("expected space to toggle the highlighted involving person, got %#v", updated.selectedInvolvingIDs)
+	}
+}
+
 func TestLabelsFallbackWhenPrimaryFieldsAreEmpty(t *testing.T) {
 	form := newFormModel()
 	form.SetLeaveBalance(messages.IDayLeaveBalance{

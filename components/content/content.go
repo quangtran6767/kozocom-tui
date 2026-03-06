@@ -84,6 +84,13 @@ func (m Model) PanelBindings() []key.Binding {
 	return []key.Binding{}
 }
 
+func (m Model) ShouldBlockGlobalQuit() bool {
+	if m.activeView == ViewDayOff && m.dayoffInitialized {
+		return m.dayoff.ShouldBlockGlobalQuit()
+	}
+	return false
+}
+
 func (m Model) Init() tea.Cmd {
 	return nil
 }

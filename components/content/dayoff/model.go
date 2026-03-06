@@ -106,10 +106,16 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case StateForm:
 			switch msg.String() {
 			case "esc":
+				if m.formModel.picker != pickerNone {
+					break
+				}
 				m.state = StateList
 				m.formModel.Blur()
 				return m, nil
 			case "ctrl+s":
+				if m.formModel.picker != pickerNone {
+					break
+				}
 				payload, errMsg := m.formModel.BuildPayload()
 				if errMsg != "" {
 					m.formModel.SetError(errMsg)
@@ -139,12 +145,24 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.formModel.SetLeaveBalance(msg.Data)
 		return m, nil
 
+	case messages.LeaveBalanceFailMsg:
+		m.formModel.SetError(msg.Error)
+		return m, nil
+
 	case messages.ApproversMsg:
 		m.formModel.SetApprovers(msg.Data)
 		return m, nil
 
+	case messages.ApproversFailMsg:
+		m.formModel.SetError(msg.Error)
+		return m, nil
+
 	case messages.AllEmployeesMsg:
 		m.formModel.SetAllEmployees(msg.Data)
+		return m, nil
+
+	case messages.AllEmployeesFailMsg:
+		m.formModel.SetError(msg.Error)
 		return m, nil
 
 	case messages.LeaveDaysCalcMsg:

@@ -27,6 +27,8 @@ type EmployeeItem struct {
 	LastName    string `json:"last_name"`
 	Email       string `json:"email"`
 	AccountName string `json:"account_name"`
+	FullName    string `json:"full_name"`
+	Nickname    string `json:"nickname"`
 }
 
 type DayOffRequestItem struct {

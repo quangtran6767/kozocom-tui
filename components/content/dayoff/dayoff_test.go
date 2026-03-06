@@ -1,10 +1,13 @@
 package dayoff
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/quangtran6767/kozocom-tui/messages"
 )
@@ -23,16 +26,28 @@ func TestDayOffColumnsFitRequestedWidth(t *testing.T) {
 	}
 }
 
+func TestNewFormModelSetsTodayDefaultTimes(t *testing.T) {
+	form := newFormModel()
+	today := time.Now().Format("2006-01-02")
+
+	if got := form.inputs[formFieldStartTime].Value(); got != today+" 08:00:00" {
+		t.Fatalf("unexpected default start time: %q", got)
+	}
+	if got := form.inputs[formFieldEndTime].Value(); got != today+" 17:00:00" {
+		t.Fatalf("unexpected default end time: %q", got)
+	}
+}
+
 func TestFormViewShowsRealFields(t *testing.T) {
 	form := newFormModel()
 	form.SetSize(76, 24)
 	form.SetLeaveBalance(messages.IDayLeaveBalance{
 		LeaveBalance: []messages.ILeaveBalance{
-			{ID: 12, LeaveTypeID: 4, LeaveType: "Paid Leave", RemainingDays: 3.5},
+			{ID: 12, LeaveTypeID: 4, Text: "Paid Leave", RemainingDays: 3.5},
 		},
 	})
 	form.SetApprovers([]messages.EmployeeItem{
-		{AccountID: 1001, AccountName: "Alice"},
+		{AccountID: 1001, Email: "alice@example.com"},
 	})
 	form.SetAllEmployees([]messages.EmployeeItem{
 		{AccountID: 2001, AccountName: "Bob"},
@@ -43,11 +58,29 @@ func TestFormViewShowsRealFields(t *testing.T) {
 	if strings.Contains(view, "Day Off Form Placeholder") {
 		t.Fatal("placeholder text should not be rendered")
 	}
+	if strings.Contains(view, "Format: YYYY-MM-DD HH:MM:SS") {
+		t.Fatal("format helper text should be removed")
+	}
+	if strings.Contains(view, "Quick Reference") {
+		t.Fatal("quick reference should be removed")
+	}
 
-	for _, expected := range []string{"Start Time", "End Time", "Leave Type", "Approvers", "Reason"} {
+	for _, expected := range []string{"New Day-off Request", "Start Time", "End Time", "Leave Type", "Approver", "Reason", "Paid Leave", "alice@example.com"} {
 		if !strings.Contains(view, expected) {
 			t.Fatalf("expected form view to contain %q", expected)
 		}
+	}
+
+	lines := strings.Split(view, "\n")
+	firstNonEmpty := -1
+	for i, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			firstNonEmpty = i
+			break
+		}
+	}
+	if firstNonEmpty <= 0 {
+		t.Fatalf("expected centered form with top padding, got %q", view)
 	}
 }
 
@@ -58,13 +91,19 @@ func TestBuildPayloadUsesSelectedLeaveBalance(t *testing.T) {
 			{ID: 12, LeaveTypeID: 4, LeaveType: "Paid Leave", RemainingDays: 3.5},
 		},
 	})
+	form.SetApprovers([]messages.EmployeeItem{
+		{AccountID: 1001, AccountName: "Alice"},
+		{AccountID: 1002, AccountName: "Eve"},
+	})
+	form.SetAllEmployees([]messages.EmployeeItem{
+		{AccountID: 2001, AccountName: "Bob"},
+	})
 
 	form.inputs[formFieldStartTime].SetValue("2026-03-10 08:00:00")
 	form.inputs[formFieldEndTime].SetValue("2026-03-10 17:00:00")
-	form.inputs[formFieldLeaveBalance].SetValue("12")
-	form.inputs[formFieldApprovers].SetValue("1001,1002")
-	form.inputs[formFieldInvolvingPersons].SetValue("2001")
 	form.inputs[formFieldReason].SetValue("Medical appointment")
+	form.selectedApproverID = 1002
+	form.selectedInvolvingIDs[2001] = struct{}{}
 
 	payload, errMsg := form.BuildPayload()
 	if errMsg != "" {
@@ -77,6 +116,146 @@ func TestBuildPayloadUsesSelectedLeaveBalance(t *testing.T) {
 
 	if got := payload["leave_type_id"]; got != 4 {
 		t.Fatalf("unexpected leave type id: %#v", got)
+	}
+
+	if got := payload["approvers"]; !reflect.DeepEqual(got, []int{1002}) {
+		t.Fatalf("unexpected approvers payload: %#v", got)
+	}
+
+	if got := payload["involving_persons"]; !reflect.DeepEqual(got, []int{2001}) {
+		t.Fatalf("unexpected involving_persons payload: %#v", got)
+	}
+}
+
+func TestPickerViewSupportsSearchAndMultiSelect(t *testing.T) {
+	form := newFormModel()
+	form.SetSize(76, 24)
+	form.SetAllEmployees([]messages.EmployeeItem{
+		{AccountID: 2001, AccountName: "Bob"},
+		{AccountID: 2002, AccountName: "Charlie"},
+	})
+
+	form.picker = pickerInvolvingPersons
+	form.selectedInvolvingIDs[2001] = struct{}{}
+	form.pickerSearch.SetValue("bo")
+
+	view := ansi.Strip(form.View())
+	for _, expected := range []string{"Involving", "Choose any teammates to notify", "Bob", "[x]"} {
+		if !strings.Contains(view, expected) {
+			t.Fatalf("expected picker view to contain %q, got %q", expected, view)
+		}
+	}
+	if strings.Contains(view, "Charlie") {
+		t.Fatalf("expected picker search to filter out non-matching options, got %q", view)
+	}
+	if strings.Contains(view, "Start Time") {
+		t.Fatalf("expected picker view to hide the main form, got %q", view)
+	}
+}
+
+func TestEscClosesPickerBeforeClosingForm(t *testing.T) {
+	model := New("token")
+	model.state = StateForm
+	model.focused = true
+	model.formModel.picker = pickerApprover
+
+	updated, _ := model.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+
+	if updated.state != StateForm {
+		t.Fatalf("expected form to stay open, got state %v", updated.state)
+	}
+	if updated.formModel.picker != pickerNone {
+		t.Fatal("expected esc to close the picker first")
+	}
+}
+
+func TestOpenPickerStartsAtCurrentSelection(t *testing.T) {
+	form := newFormModel()
+	form.SetApprovers([]messages.EmployeeItem{
+		{AccountID: 1, AccountName: "Alice"},
+		{AccountID: 2, AccountName: "Bob"},
+	})
+	form.selectedApproverID = 2
+
+	form.openPicker(pickerApprover)
+
+	if form.pickerCursor != 1 {
+		t.Fatalf("expected picker cursor to start at selected approver, got %d", form.pickerCursor)
+	}
+}
+
+func TestEnterClosesInvolvingPickerWithoutTogglingSelection(t *testing.T) {
+	form := newFormModel()
+	form.SetAllEmployees([]messages.EmployeeItem{
+		{AccountID: 2001, AccountName: "Bob"},
+	})
+	form.picker = pickerInvolvingPersons
+
+	updated, _ := form.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+
+	if updated.picker != pickerNone {
+		t.Fatalf("expected picker to close, got %v", updated.picker)
+	}
+	if len(updated.selectedInvolvingIDs) != 0 {
+		t.Fatalf("expected enter to finish without toggling selection, got %#v", updated.selectedInvolvingIDs)
+	}
+}
+
+func TestLabelsFallbackWhenPrimaryFieldsAreEmpty(t *testing.T) {
+	form := newFormModel()
+	form.SetLeaveBalance(messages.IDayLeaveBalance{
+		LeaveBalance: []messages.ILeaveBalance{
+			{ID: 12, LeaveTypeID: 4, Text: "Paid Leave", RemainingDays: 3.5},
+		},
+	})
+	form.SetApprovers([]messages.EmployeeItem{
+		{AccountID: 1001, Email: "alice@example.com"},
+	})
+
+	if got := form.selectedLeaveBalanceLabel(); !strings.Contains(got, "Paid Leave") {
+		t.Fatalf("expected leave balance label fallback to use text, got %q", got)
+	}
+	if got := form.selectedApproverLabel(); got != "alice@example.com" {
+		t.Fatalf("expected approver label fallback to use email, got %q", got)
+	}
+}
+
+func TestEmployeeLabelUsesFullNameBeforeAccountFallback(t *testing.T) {
+	form := newFormModel()
+	form.SetApprovers([]messages.EmployeeItem{
+		{AccountID: 5, FullName: "Pham Tien", AccountName: "Account 5"},
+	})
+
+	if got := form.selectedApproverLabel(); got != "Pham Tien" {
+		t.Fatalf("expected approver label to use full name, got %q", got)
+	}
+}
+
+func TestRenderSelectorRowTruncatesLongValue(t *testing.T) {
+	row := ansi.Strip(renderSelectorRow(
+		"Approver",
+		"Nguyen Van A with a very very very long label that should not overflow the content area",
+		false,
+		20,
+		false,
+		lipgloss.NewStyle().Width(16),
+	))
+
+	if strings.Contains(row, "very very very long label that should not overflow the content area") {
+		t.Fatalf("expected selector row to truncate long value, got %q", row)
+	}
+	if !strings.Contains(row, "...") {
+		t.Fatalf("expected selector row to show ellipsis for truncated value, got %q", row)
+	}
+}
+
+func TestModelSurfacesLeaveBalanceFetchErrors(t *testing.T) {
+	model := New("token")
+
+	updated, _ := model.Update(messages.LeaveBalanceFailMsg{Error: "leave balance failed"})
+
+	if updated.formModel.errMsg != "leave balance failed" {
+		t.Fatalf("expected leave balance error to be stored, got %q", updated.formModel.errMsg)
 	}
 }
 
